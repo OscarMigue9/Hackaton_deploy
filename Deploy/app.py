@@ -1,9 +1,16 @@
 import io
 from pathlib import Path
+from typing import Any
 
 import streamlit as st
 from PIL import Image
-from ultralytics import YOLO
+
+YOLO: Any | None = None
+ULTRALYTICS_IMPORT_ERROR: Exception | None = None
+try:
+    from ultralytics import YOLO
+except Exception as exc:
+    ULTRALYTICS_IMPORT_ERROR = exc
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -123,6 +130,10 @@ def run_yolo_inference(model: YOLO, image: Image.Image) -> Image.Image:
 
 @st.cache_resource
 def load_trained_yolo_model(model_path: str) -> YOLO:
+    if YOLO is None:
+        raise RuntimeError(
+            "No se pudo importar Ultralytics. Verifica runtime/dependencias en Streamlit Cloud."
+        )
     return YOLO(model_path, task="detect")
 
 
@@ -152,6 +163,14 @@ st.markdown(
 )
 
 run_inference = st.button("Ejecutar inferencia", type="primary", disabled=not uploaded_images)
+
+if ULTRALYTICS_IMPORT_ERROR is not None:
+    st.error(
+        "Fallo al cargar Ultralytics/OpenCV en este entorno. "
+        "Usa Python 3.11 en Streamlit Cloud y reinstala dependencias."
+    )
+    st.exception(ULTRALYTICS_IMPORT_ERROR)
+    st.stop()
 
 if run_inference:
     try:
